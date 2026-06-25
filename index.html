@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TikTok Producer Pro - Reddit & Smart Cutter</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #09090b;
+            color: #f4f4f5;
+            max-width: 650px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        .container {
+            background-color: #18181b;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            border: 1px solid #27272a;
+        }
+        h1 {
+            color: #a855f7;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #a1a1aa;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #a855f7;
+        }
+        input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            background: #27272a;
+            border: 1px solid #3f3f46;
+            border-radius: 8px;
+            color: #fff;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #a855f7;
+            color: white;
+            border: none;
+            padding: 15px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+            transition: 0.2s;
+        }
+        button:hover {
+            background-color: #9333ea;
+        }
+        button:disabled {
+            background-color: #3f3f46;
+            color: #71717a;
+            cursor: not-allowed;
+        }
+        #status {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 6px;
+            background-color: #27273a;
+            font-weight: bold;
+            color: #c084fc;
+            text-align: center;
+            border: 1px solid #a855f7;
+        }
+        .preview-box {
+            margin-top: 25px;
+            text-align: center;
+            background-color: #27272a;
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid #3f3f46;
+        }
+        video {
+            width: 100%;
+            max-width: 200px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .download-zone {
+            margin-top: 25px;
+            border-top: 1px solid #27272a;
+            padding-top: 20px;
+        }
+        .btn-download-full {
+            background-color: #25d366;
+            text-decoration: none;
+            display: block;
+            text-align: center;
+            padding: 12px;
+            color: white;
+            font-weight: bold;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .btn-download-full:hover {
+            background-color: #1ebd54;
+        }
+        .grid-cortes {
+            display: grid;
+            gap: 12px;
+        }
+        .item-corte {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #27272a;
+            padding: 12px 15px;
+            border-radius: 8px;
+            border: 1px solid #3f3f46;
+        }
+        .item-corte span {
+            font-weight: bold;
+        }
+        .btn-baixar-corte {
+            background-color: #3b82f6;
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .btn-baixar-corte:hover {
+            background-color: #2563eb;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>TikTok Producer Pro 🎬</h1>
+    <p class="subtitle">Mescle áudio, recorte para 9:16 e fatie para monetização em um clique.</p>
+    
+    <div class="input-group">
+        <label for="videoInput">1. Vídeo de Gameplay (Horizontal ou Vertical):</label>
+        <input type="file" id="videoInput" accept="video/*">
+    </div>
+
+    <div class="input-group">
+        <label for="audioInput">2. Áudio da Narração (MP3/WAV):</label>
+        <input type="file" id="audioInput" accept="audio/*">
+    </div>
+
+    <button id="processBtn">Processar e Gerar Downloads</button>
+
+    <div id="status" style="display: none;">Aguardando comandos...</div>
+
+    <div id="previewBox" class="preview-box" style="display: none;">
+        <h3 style="color: #22c55e; margin-top: 0;">🎥 Pré-visualização do Vídeo Completo:</h3>
+        <video id="outputVideo" controls></video>
+        
+        <div class="download-zone">
+            <a id="downloadFullBtn" class="btn-download-full" href="#">📥 Baixar Vídeo Inteiro (9:16)</a>
+            
+            <h3 style="color: #a855f7; text-align: left; margin-bottom: 15px;">✨ Cortes Inteligentes (+1 min para TikTok):</h3>
+            <div id="gridCortes" class="grid-cortes"></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ffmpeg/0.11.6/ffmpeg.min.js"></script>
+
+<script>
+    const { createFFmpeg, fetchFile } = FFmpeg;
+    const ffmpeg = createFFmpeg({ log: true });
+
+    const videoInput = document.getElementById('videoInput');
+    const audioInput = document.getElementById('audioInput');
+    const processBtn = document.getElementById('processBtn');
+    const status = document.getElementById('status');
+    const previewBox = document.getElementById('previewBox');
+    const outputVideo = document.getElementById('outputVideo');
+    const downloadFullBtn = document.getElementById('downloadFullBtn');
+    const gridCortes = document.getElementById('gridCortes');
+
+    processBtn.addEventListener('click', async () => {
+        if (!videoInput.files[0] || !audioInput.files[0]) {
+            alert('Por favor, selecione o arquivo de vídeo e o de áudio!');
+            return;
+        }
+
+        processBtn.disabled = true;
+        status.style.display = "block";
+        previewBox.style.display = "none";
+        gridCortes.innerHTML = "";
+
+        try {
+            if (!ffmpeg.isLoaded()) {
+                status.innerText = "Carregando o motor de vídeo do navegador...";
+                await ffmpeg.load();
+            }
+
+            const videoFile = videoInput.files[0];
+            const audioFile = audioInput.files[0];
+
+            status.innerText = "Escrevendo arquivos de mídia na memória virtual...";
+            ffmpeg.FS('writeFile', 'gameplay.mp4', await fetchFile(videoFile));
+            ffmpeg.FS('writeFile', 'naracao.mp3', await fetchFile(audioFile));
+
+            // FASE 1: Mesclar áudio e aplicar crop vertical em alta qualidade (CRF 18)
+            status.innerText = "Fase 1/2: Mesclando áudio e recortando para o formato vertical (9:16)...";
+            await ffmpeg.run(
+                '-i', 'gameplay.mp4',
+                '-i', 'naracao.mp3',
+                '-vf', 'crop=ih*9/16:ih',
+                '-c:v', 'libx264',
+                '-crf', '18',
+                '-preset', 'fast',
+                '-c:a', 'aac',
+                '-map', '0:v:0',
+                '-map', '1:a:0',
+                '-shortest',
+                'video_completo.mp4'
+            );
+
+            // Obter a duração do vídeo renderizado para calcular os cortes inteligentes
+            status.innerText = "Analisando metadados do vídeo gerado...";
+            
+            // Criar uma tag de vídeo fantasma na memória rápida para pegar a duração exata da narração
+            const dataCompleto = ffmpeg.FS('readFile', 'video_completo.mp4');
+            const blobCompleto = new Blob([dataCompleto.buffer], { type: 'video/mp4' });
+            const urlCompleto = URL.createObjectURL(blobCompleto);
+            
+            const videoElementParaMedir = document.createElement('video');
+            videoElementParaMedir.src = urlCompleto;
+            
+            await new Promise((resolve) => {
+                videoElementParaMedir.onloadedmetadata = () => {
+                    resolve();
+                };
+            });
+
+            const duracaoTotal = videoElementParaMedir.duration;
+
+            // FASE 2: Lógica Matemática de Divisão Sem Sobras (Foco em Monetização)
+            status.innerText = "Fase 2/2: Calculando fatiamento inteligente sem sobras...";
+            let tempoPorCorte = 61; // Padrão de segurança (+1 min)
+            let totalCortes = Math.floor(duracaoTotal / tempoPorCorte);
+
+            if (totalCortes > 0) {
+                tempoPorCorte = duracaoTotal / totalCortes;
+            } else {
+                totalCortes = 1;
+                tempoPorCorte = duracaoTotal;
+            }
+
+            // Exibir a pré-visualização e preparar download do arquivo completo
+            outputVideo.src = urlCompleto;
+            downloadFullBtn.href = urlCompleto;
+            downloadFullBtn.download = "video_completo_916.mp4";
+
+            // Gerar cada um dos cortes usando cópia direta ultrarrápida e sem perdas (-c copy)
+            for (let i = 0; i < totalCortes; i++) {
+                const tempoInicio = i * tempoPorCorte;
+                const nomeSaida = `parte_${i + 1}.mp4`;
+                
+                status.innerText = `Gerando Parte ${i + 1} de ${totalCortes} (${Math.round(tempoPorCorte)}s)...`;
+
+                await ffmpeg.run(
+                    '-ss', tempoInicio.toString(),
+                    '-i', 'video_completo.mp4',
+                    '-t', tempoPorCorte.toString(),
+                    '-c', 'copy',
+                    nomeSaida
+                );
+
+                const dataCorte = ffmpeg.FS('readFile', nomeSaida);
+                const blobCorte = new Blob([dataCorte.buffer], { type: 'video/mp4' });
+                const urlCorte = URL.createObjectURL(blobCorte);
+
+                // Criar interface de download do corte
+                const minutos = Math.floor(tempoPorCorte / 60);
+                const segundos = Math.round(tempoPorCorte % 60);
+                
+                const itemHtml = document.createElement('div');
+                itemHtml.className = 'item-corte';
+                itemHtml.innerHTML = `
+                    <div>
+                        <span>🎬 Parte ${i + 1} de ${totalCortes}</span>
+                        <div style="font-size: 12px; color: #a1a1aa; margin-top: 2px;">Duração: ${minutos}m ${segundos}s</div>
+                    </div>
+                    <a class="btn-baixar-corte" href="${urlCorte}" download="Parte_${i + 1}_TikTok.mp4">Baixar Parte ${i + 1}</a>
+                `;
+                gridCortes.appendChild(itemHtml);
+            }
+
+            status.innerText = "Todo o processo concluído com sucesso!";
+            previewBox.style.display = "block";
+
+        } catch (error) {
+            console.error(error);
+            status.innerText = "Erro durante a renderização. Verifique o painel do desenvolvedor (Console).";
+        } finally {
+            processBtn.disabled = false;
+        }
+    });
+</script>
+
+</body>
+</html>
